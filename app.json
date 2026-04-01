@@ -13,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "MindLog sends you reminders to record your thoughts throughout the day."
+      }
     },
     "android": {
       "adaptiveIcon": {
