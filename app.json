@@ -15,8 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "MindLog sends you reminders to record your thoughts throughout the day."
-      }
+        "NSUserNotificationsUsageDescription": "MindLog sends you reminders to record your thoughts throughout the day.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.cmannaberg.MindLog"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +29,18 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "78d3a3f9-b1fe-4dbd-9bd6-77f011fdf915"
+      }
+    },
+    "owner": "cmannaberg",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/78d3a3f9-b1fe-4dbd-9bd6-77f011fdf915"
     }
   }
 }
