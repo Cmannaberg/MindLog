@@ -112,10 +112,16 @@ async function getScheduledNotifications() {
 }
 
 async function logToSheets(thought) {
-  if (SHEETS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
+  if (SHEETS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return 'no url';
   const timestamp = new Date().toISOString();
   const url = `${SHEETS_URL}?timestamp=${encodeURIComponent(timestamp)}&thought=${encodeURIComponent(thought)}`;
-  await fetch(url, { method: 'GET', redirect: 'follow' });
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onload = () => resolve(`${xhr.status} ${xhr.responseText.substring(0, 20)}`);
+    xhr.onerror = () => reject(new Error('Network request failed'));
+    xhr.send();
+  });
 }
 
 export default function App() {
@@ -160,8 +166,8 @@ export default function App() {
     if (!thought.trim()) return;
     setSaving(true);
     try {
-      await logToSheets(thought.trim());
-      setLastSaved(new Date().toLocaleTimeString());
+      const result = await logToSheets(thought.trim());
+      setLastSaved(`${new Date().toLocaleTimeString()} (${result})`);
       setThought('');
     } catch (e) {
       Alert.alert('Save failed', e.message);
