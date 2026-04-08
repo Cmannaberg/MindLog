@@ -15,7 +15,7 @@ import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 
 // --- Config -----------------------------------------------------------
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwwXa7rVdHK8FyM0WATaPxqG-JqhgObu-u-IGIfg4_LleU57d6LU9aYTjVINn_LxtJT/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwPupK6A5es8JeFs3A_ArW5qNPxizUKMwCAnwvzKucBIAK6KXXNuz31qAPIoFRXV6x9/exec';
 
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 22;
@@ -120,10 +120,10 @@ function localTimestamp() {
   });
 }
 
-async function logToSheets(thought) {
+async function logToSheets(thought, mood) {
   if (SHEETS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
   const timestamp = localTimestamp();
-  const url = `${SHEETS_URL}?timestamp=${encodeURIComponent(timestamp)}&thought=${encodeURIComponent(thought)}`;
+  const url = `${SHEETS_URL}?timestamp=${encodeURIComponent(timestamp)}&thought=${encodeURIComponent(thought)}&mood=${encodeURIComponent(mood || '')}`;
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
@@ -133,8 +133,18 @@ async function logToSheets(thought) {
   });
 }
 
+const MOODS = [
+  { label: 'Happy',    emoji: '😊' },
+  { label: 'Sad',      emoji: '😔' },
+  { label: 'Angry',    emoji: '😠' },
+  { label: 'Stressed', emoji: '😤' },
+  { label: 'Tired',    emoji: '😴' },
+  { label: 'Hungry',   emoji: '🍽️' },
+];
+
 export default function App() {
   const [thought, setThought] = useState('');
+  const [mood, setMood] = useState(null);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const [scheduledTimes, setScheduledTimes] = useState([]);
@@ -175,9 +185,10 @@ export default function App() {
     if (!thought.trim()) return;
     setSaving(true);
     try {
-      await logToSheets(thought.trim());
+      await logToSheets(thought.trim(), mood);
       setLastSaved(new Date().toLocaleTimeString());
       setThought('');
+      setMood(null);
     } catch (e) {
       Alert.alert('Save failed', e.message);
     } finally {
@@ -187,7 +198,7 @@ export default function App() {
 
   async function handleSkip() {
     try {
-      await logToSheets('skipped');
+      await logToSheets('skipped', '');
       setLastSaved(`${new Date().toLocaleTimeString()} (skipped)`);
     } catch (e) {
       Alert.alert('Skip failed', e.message);
@@ -231,8 +242,22 @@ export default function App() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>MindLog</Text>
-        <Text style={styles.version}>v3</Text>
+        <Text style={styles.version}>v4</Text>
         <Text style={styles.prompt}>What are you thinking right now?</Text>
+
+        <Text style={styles.moodLabel}>How are you feeling?</Text>
+        <View style={styles.moodRow}>
+          {MOODS.map(m => (
+            <TouchableOpacity
+              key={m.label}
+              style={[styles.moodButton, mood === m.label && styles.moodButtonSelected]}
+              onPress={() => setMood(mood === m.label ? null : m.label)}
+            >
+              <Text style={styles.moodEmoji}>{m.emoji}</Text>
+              <Text style={[styles.moodText, mood === m.label && styles.moodTextSelected]}>{m.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         <TextInput
           style={styles.input}
@@ -327,6 +352,18 @@ const styles = StyleSheet.create({
   skipButtonText: { color: '#999', fontSize: 15 },
   saved: { textAlign: 'center', color: '#888', marginTop: 16, fontSize: 14 },
   version: { fontSize: 11, color: '#ccc', marginBottom: 4 },
+  moodLabel: { fontSize: 14, color: '#888', marginBottom: 10 },
+  moodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  moodButton: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 20,
+    paddingVertical: 6, paddingHorizontal: 10,
+    alignItems: 'center', backgroundColor: '#fff',
+    flexDirection: 'row', gap: 4,
+  },
+  moodButtonSelected: { borderColor: '#4a7c59', backgroundColor: '#edf4f0' },
+  moodEmoji: { fontSize: 16 },
+  moodText: { fontSize: 13, color: '#888' },
+  moodTextSelected: { color: '#4a7c59', fontWeight: '600' },
   debugToggle: { marginTop: 32, alignItems: 'center' },
   debugToggleText: { color: '#aaa', fontSize: 13 },
   debugBox: {
