@@ -54,7 +54,7 @@ async function scheduleRandomNotifications() {
 
   const allTimes = [];
 
-  for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
+  for (let dayOffset = 0; dayOffset <= 6; dayOffset++) {
     const windowStart = new Date(todayStart);
     const windowEnd = new Date(todayEnd);
     windowStart.setDate(windowStart.getDate() + dayOffset);
@@ -111,14 +111,23 @@ async function getScheduledNotifications() {
     .sort((a, b) => a - b);
 }
 
+function localTimestamp() {
+  const now = new Date();
+  return now.toLocaleString('en-US', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: true,
+  });
+}
+
 async function logToSheets(thought) {
-  if (SHEETS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return 'no url';
-  const timestamp = new Date().toISOString();
+  if (SHEETS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
+  const timestamp = localTimestamp();
   const url = `${SHEETS_URL}?timestamp=${encodeURIComponent(timestamp)}&thought=${encodeURIComponent(thought)}`;
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
-    xhr.onload = () => resolve(`${xhr.status} ${xhr.responseText.substring(0, 20)}`);
+    xhr.onload = () => resolve();
     xhr.onerror = () => reject(new Error('Network request failed'));
     xhr.send();
   });
@@ -166,13 +175,22 @@ export default function App() {
     if (!thought.trim()) return;
     setSaving(true);
     try {
-      const result = await logToSheets(thought.trim());
-      setLastSaved(`${new Date().toLocaleTimeString()} (${result})`);
+      await logToSheets(thought.trim());
+      setLastSaved(new Date().toLocaleTimeString());
       setThought('');
     } catch (e) {
       Alert.alert('Save failed', e.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSkip() {
+    try {
+      await logToSheets('skipped');
+      setLastSaved(`${new Date().toLocaleTimeString()} (skipped)`);
+    } catch (e) {
+      Alert.alert('Skip failed', e.message);
     }
   }
 
@@ -213,7 +231,7 @@ export default function App() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>MindLog</Text>
-        <Text style={styles.version}>v2</Text>
+        <Text style={styles.version}>v3</Text>
         <Text style={styles.prompt}>What are you thinking right now?</Text>
 
         <TextInput
@@ -232,6 +250,10 @@ export default function App() {
           disabled={!thought.trim() || saving}
         >
           <Text style={styles.buttonText}>{saving ? 'Saving...' : 'Save'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+          <Text style={styles.skipButtonText}>Skip — I'm busy</Text>
         </TouchableOpacity>
 
         {lastSaved && <Text style={styles.saved}>Saved at {lastSaved}</Text>}
@@ -294,6 +316,15 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: '#bbb' },
   buttonText: { color: '#fff', fontSize: 17, fontWeight: '600' },
+  skipButton: {
+    marginTop: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  skipButtonText: { color: '#999', fontSize: 15 },
   saved: { textAlign: 'center', color: '#888', marginTop: 16, fontSize: 14 },
   version: { fontSize: 11, color: '#ccc', marginBottom: 4 },
   debugToggle: { marginTop: 32, alignItems: 'center' },
