@@ -36,9 +36,7 @@
       }
     },
     "owner": "cmannaberg",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/78d3a3f9-b1fe-4dbd-9bd6-77f011fdf915"
     }

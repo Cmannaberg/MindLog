@@ -15,7 +15,7 @@ import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 
 // --- Config -----------------------------------------------------------
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbynufz1dX4pnsU0fofDORYfJCLzIumZcHJLJm6Ip8fAfR7DibZO-ppvpEu8qKuIZgtzug/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwwXa7rVdHK8FyM0WATaPxqG-JqhgObu-u-IGIfg4_LleU57d6LU9aYTjVINn_LxtJT/exec';
 
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 22;
@@ -45,10 +45,14 @@ async function scheduleRandomNotifications() {
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const now = new Date();
+  const nowMs = now.getTime();
+
   const todayStart = new Date(now);
   todayStart.setHours(DAY_START_HOUR, 0, 0, 0);
   const todayEnd = new Date(now);
   todayEnd.setHours(DAY_END_HOUR, 0, 0, 0);
+
+  const allTimes = [];
 
   for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
     const windowStart = new Date(todayStart);
@@ -56,43 +60,50 @@ async function scheduleRandomNotifications() {
     windowStart.setDate(windowStart.getDate() + dayOffset);
     windowEnd.setDate(windowEnd.getDate() + dayOffset);
 
-    const startMs = dayOffset === 0 ? Math.max(now.getTime(), windowStart.getTime()) : windowStart.getTime();
+    const startMs = dayOffset === 0 ? Math.max(nowMs, windowStart.getTime()) : windowStart.getTime();
     const endMs = windowEnd.getTime();
     const windowMs = endMs - startMs;
 
     if (windowMs <= 0) continue;
 
-    const times = [];
     for (let i = 0; i < NOTIFICATIONS_PER_DAY; i++) {
-      times.push(new Date(startMs + Math.random() * windowMs));
+      allTimes.push(new Date(startMs + Math.random() * windowMs));
     }
-    times.sort((a, b) => a - b);
+  }
 
-    for (const t of times) {
-      try {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'MindLog',
-            body: 'What are you thinking right now?',
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: t,
-          },
-        });
-      } catch (e) {
-        console.log('Scheduling error:', e.message);
-      }
+  allTimes.sort((a, b) => a - b);
+
+  for (const t of allTimes) {
+    const secondsUntil = Math.round((t.getTime() - nowMs) / 1000);
+    if (secondsUntil <= 0) continue;
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'MindLog',
+          body: 'What are you thinking right now?',
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntil,
+          repeats: false,
+        },
+      });
+    } catch (e) {
+      console.log('Scheduling error:', e.message);
     }
   }
 }
 
 async function getScheduledNotifications() {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const now = Date.now();
   return scheduled
     .map(n => {
       const t = n.trigger;
-      // handle different trigger formats across SDK versions
+      if (t.seconds != null) {
+        // TIME_INTERVAL trigger — approximate fire time
+        return new Date(now + t.seconds * 1000);
+      }
       const ms = t.date ?? t.value ?? t.timestamp;
       return ms ? new Date(ms) : null;
     })
@@ -103,7 +114,8 @@ async function getScheduledNotifications() {
 async function logToSheets(thought) {
   if (SHEETS_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
   const timestamp = new Date().toISOString();
-  await axios.post(SHEETS_URL, { timestamp, thought });
+  const url = `${SHEETS_URL}?timestamp=${encodeURIComponent(timestamp)}&thought=${encodeURIComponent(thought)}`;
+  await fetch(url, { method: 'GET', redirect: 'follow' });
 }
 
 export default function App() {
@@ -195,6 +207,7 @@ export default function App() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>MindLog</Text>
+        <Text style={styles.version}>v2</Text>
         <Text style={styles.prompt}>What are you thinking right now?</Text>
 
         <TextInput
@@ -276,6 +289,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { backgroundColor: '#bbb' },
   buttonText: { color: '#fff', fontSize: 17, fontWeight: '600' },
   saved: { textAlign: 'center', color: '#888', marginTop: 16, fontSize: 14 },
+  version: { fontSize: 11, color: '#ccc', marginBottom: 4 },
   debugToggle: { marginTop: 32, alignItems: 'center' },
   debugToggleText: { color: '#aaa', fontSize: 13 },
   debugBox: {
