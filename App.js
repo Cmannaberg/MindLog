@@ -13,6 +13,7 @@ import {
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
+import { randomQuote } from './quotes';
 
 // --- Config -----------------------------------------------------------
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwPupK6A5es8JeFs3A_ArW5qNPxizUKMwCAnwvzKucBIAK6KXXNuz31qAPIoFRXV6x9/exec';
@@ -147,6 +148,7 @@ export default function App() {
   const [mood, setMood] = useState(null);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [currentQuote] = useState(() => randomQuote());
   const [scheduledTimes, setScheduledTimes] = useState([]);
   const [permissionStatus, setPermissionStatus] = useState('checking...');
   const [showDebug, setShowDebug] = useState(false);
@@ -242,7 +244,7 @@ export default function App() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>MindLog</Text>
-        <Text style={styles.version}>v4</Text>
+        <Text style={styles.version}>v5</Text>
         <Text style={styles.prompt}>What are you thinking right now?</Text>
 
         <Text style={styles.moodLabel}>How are you feeling?</Text>
@@ -268,6 +270,11 @@ export default function App() {
           onChangeText={setThought}
           autoFocus
         />
+
+        <View style={styles.quoteBox}>
+          <Text style={styles.quoteText}>"{currentQuote.quote}"</Text>
+          <Text style={styles.quoteSource}>— {currentQuote.source}</Text>
+        </View>
 
         <TouchableOpacity
           style={[styles.button, (!thought.trim() || saving) && styles.buttonDisabled]}
@@ -341,6 +348,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { backgroundColor: '#bbb' },
   buttonText: { color: '#fff', fontSize: 17, fontWeight: '600' },
+  quoteBox: {
+    backgroundColor: '#f0ece4',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4a7c59',
+  },
+  quoteText: { fontSize: 14, color: '#444', fontStyle: 'italic', lineHeight: 20 },
+  quoteSource: { fontSize: 12, color: '#888', marginTop: 6, textAlign: 'right' },
   skipButton: {
     marginTop: 12,
     borderRadius: 12,
